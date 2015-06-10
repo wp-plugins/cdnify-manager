@@ -35,6 +35,9 @@ A. Please get in touch: support(at)paulandsam.co
 
 == Changelog ==
 
+= 1.1.1 =
+* If a resource is deleted, then no attempt is made to use that resource.
+
 = 1.1 =
 * Ensure that no attempt to replace URLs is made unless a resource is first selected.
 * Resource table styling.

@@ -4,7 +4,7 @@
  * Plugin Name: CDNify Manager
  * Plugin URI: https://www.paulandsam.co/cdnify-manager/
  * Description: CDNify.com for WordPress - Power your website with a Content Delivery Network (CDN). View and manage your resources, create new resources within WordPress and choose which resource your website should use.
- * Version: 1.1
+ * Version: 1.1.1
  * Author: Paul Gillespie
  * Author URI: https://www.paulandsam.co/
  * License: GPL v3
@@ -89,6 +89,19 @@ class CDNifyManager {
                     $CDNify->deleteResource($ResourceID);
                     
                     $DeletedResource = true;
+                    
+                    $Resources     = $CDNify->getResources();
+                    $ClearResource = true;
+                    
+                    foreach($Resources->resources as $Resource) {
+                        if($Resource->hostname == get_option("cdnify_resource")) {
+                            $ClearResource = false;
+                        }
+                    }
+                    
+                    if($ClearResource) {
+                        update_option("cdnify_resource", "");
+                    }
                 }
             }
             
@@ -334,17 +347,19 @@ class CDNifyManager {
     
     function use_cdnify() {
         if(get_option("cdnify_resource") != "") {
-            add_filter("script_loader_src", array("CDNifyManager", "change_urls"));
-            add_filter("style_loader_src", array("CDNifyManager", "change_urls"));
-            add_filter("wp_get_attachment_thumb_url", array("CDNifyManager", "change_urls"));
-            add_filter("wp_get_attachment_url", array("CDNifyManager", "change_urls"));
-            add_filter("pre_link_image", array("CDNifyManager", "change_urls"));
-            
-            $options = wp_load_alloptions();
-            
-            foreach($options as $name => $value) {
-                if((preg_match("/\.png$/", $value)) || (preg_match("/\.jpg$/", $value))) {
-                    add_filter("option_" . $name, array("CDNifyManager", "change_urls"));
+            if(get_option("cdnify_api_key") != "") {
+                add_filter("script_loader_src", array("CDNifyManager", "change_urls"));
+                add_filter("style_loader_src", array("CDNifyManager", "change_urls"));
+                add_filter("wp_get_attachment_thumb_url", array("CDNifyManager", "change_urls"));
+                add_filter("wp_get_attachment_url", array("CDNifyManager", "change_urls"));
+                add_filter("pre_link_image", array("CDNifyManager", "change_urls"));
+                
+                $options = wp_load_alloptions();
+                
+                foreach($options as $name => $value) {
+                    if((preg_match("/\.png$/", $value)) || (preg_match("/\.jpg$/", $value))) {
+                        add_filter("option_" . $name, array("CDNifyManager", "change_urls"));
+                    }
                 }
             }
         }
