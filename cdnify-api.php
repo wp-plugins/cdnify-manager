@@ -13,11 +13,15 @@ class CDNify_API {
         $this->api_key = $api_key;
     }
     
-    public function getURL($endpoint, $params=array()) {
+    public function getURL($endpoint, $params=array(), $options="") {
         $url = $this->base_url . $endpoint;
         
         if(count($params) > 0) {
             $url .= "/" . implode("/", $params);
+        }
+        
+        if($options != "") {
+            $url .= "?" . $options;
         }
         
         return($url);
@@ -67,6 +71,10 @@ class CDNify_API {
     
     public function deleteCache($resource_id=null) {
         return($this->callAPI($this->getURL("resources", array($resource_id, "cache")), "DELETE"));
+    }
+    
+    public function getResourceBandwidth($resource_id, $from, $to) {
+        return($this->callAPI($this->getURL("stats", array($resource_id, "bandwidth"), "datefrom=" . $from . "&dateto=" . $to)));
     }
     
 }

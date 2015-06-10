@@ -33,5 +33,9 @@ A. Please get in touch: paul(at)paulandsam.co
 
 == Changelog ==
 
+= 1.1 =
+* Ensure that no attempt to replace URLs is made unless a resource is first selected.
+* Resource table styling.
+
 = 1.0 =
 * CDNify Manager

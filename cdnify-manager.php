@@ -4,7 +4,7 @@
  * Plugin Name: CDNify Manager
  * Plugin URI: https://www.paulandsam.co/cdnify-manager/
  * Description: CDNify.com for WordPress - Power your website with a Content Delivery Network (CDN). View and manage your resources, create new resources within WordPress and choose which resource your website should use.
- * Version: 1.0
+ * Version: 1.1
  * Author: Paul Gillespie
  * Author URI: https://www.paulandsam.co/
  * License: GPL v3
@@ -35,7 +35,15 @@ class CDNifyManager {
     }
     
     function enqueue_style() {
-        wp_enqueue_style("cdnify-manager", plugins_url("cdnify-manager.css", __FILE__));
+        wp_enqueue_style("cdnify-manager", plugins_url("css/cdnify-manager.css", __FILE__));
+    }
+    
+    function enqueue_javascript() {
+        wp_register_script("highcharts", plugins_url("js/highcharts.js", __FILE__), array(), "3.0.10");
+        wp_register_script("cdnify-manager", plugins_url("js/cdnify-manager.js", __FILE__), array("jquery"), "1.0");
+        
+        wp_enqueue_script("highcharts");
+        wp_enqueue_script("cdnify-manager");
     }
     
     function display_success($message="") {
@@ -209,16 +217,7 @@ class CDNifyManager {
                                     ?>
                                 
                                 </tbody>
-                                <tfoot>
-                                    <tr>
-        	                            <th scope="col" id="title" class="manage-column column-title sortable desc" style=""><a><span>Alias</span></a></th>
-    		                            <th scope="col" id="title" class="manage-column column-title sortable desc" style=""><a><span>Origin</span></a></th>
-    		                            <th scope="col" id="title" class="manage-column column-title sortable desc" style=""><a><span>Hostname</span></a></th>
-    		                            <th scope="col" id="title" class="manage-column column-title sortable desc" style=""><a><span>Created</span></a></th>
-    		                            <th scope="col" id="title" class="manage-column column-title sortable desc" style=""><a><span>Use?</span></a></th>
-    		                            <th scope="col" id="title" class="manage-column column-title sortable desc" style=""><a><span>Delete?</span></a></th>
-                                    </tr>
-                                </tfoot>
+                                
                             </table>
                             <p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="Save Settings"></p>
                         </form>
@@ -334,17 +333,19 @@ class CDNifyManager {
     }
     
     function use_cdnify() {
-        add_filter("script_loader_src", array("CDNifyManager", "change_urls"));
-        add_filter("style_loader_src", array("CDNifyManager", "change_urls"));
-        add_filter("wp_get_attachment_thumb_url", array("CDNifyManager", "change_urls"));
-        add_filter("wp_get_attachment_url", array("CDNifyManager", "change_urls"));
-        add_filter("pre_link_image", array("CDNifyManager", "change_urls"));
-        
-        $options = wp_load_alloptions();
-        
-        foreach($options as $name => $value) {
-            if((preg_match("/\.png$/", $value)) || (preg_match("/\.jpg$/", $value))) {
-                add_filter("option_" . $name, array("CDNifyManager", "change_urls"));
+        if(get_option("cdnify_resource") != "") {
+            add_filter("script_loader_src", array("CDNifyManager", "change_urls"));
+            add_filter("style_loader_src", array("CDNifyManager", "change_urls"));
+            add_filter("wp_get_attachment_thumb_url", array("CDNifyManager", "change_urls"));
+            add_filter("wp_get_attachment_url", array("CDNifyManager", "change_urls"));
+            add_filter("pre_link_image", array("CDNifyManager", "change_urls"));
+            
+            $options = wp_load_alloptions();
+            
+            foreach($options as $name => $value) {
+                if((preg_match("/\.png$/", $value)) || (preg_match("/\.jpg$/", $value))) {
+                    add_filter("option_" . $name, array("CDNifyManager", "change_urls"));
+                }
             }
         }
     }
@@ -362,11 +363,85 @@ class CDNifyManager {
         
         return($url);
     }
+
+    function dashboard_widget_graph() {
+        wp_add_dashboard_widget(
+                                "cdnify_dashboard_graph",
+                                "CDNify",
+                                array("CDNifyManager", "dashboard_widget_graph_contents"));
+    }
+
+    function dashboard_widget_graph_contents() {
+        // https://cdnify.com/api/v1/stats/{resource_id}/bandwidth?datefrom={YYYY-MM-DD}&dateto={YYYY-MM-DD}
+        
+        if(get_option("cdnify_api_key") != "") {
+            if(get_option("cdnify_resource") != "") {
+                $CDNify = new CDNify_API();
+                $CDNify->setAPIKey(get_option("cdnify_api_key"));
+                
+                $Resources = $CDNify->getResources();
+                    
+                if(count($Resources->resources) > 0) {
+                    $ResourceID = "";
+                    
+                    foreach($Resources->resources as $Resource) {
+                        if(get_option("cdnify_resource") == $Resource->hostname) {
+                            $ResourceID = $Resource->id;
+                        }
+                    }
+                    
+                    if($ResourceID != "") {
+                        
+                        $CurrentBandwidth = $CDNify->getResourceBandwidth($ResourceID, "2015-06-01", "2015-06-30");
+                        $NumberOfDays     = cal_days_in_month(CAL_GREGORIAN, date("n"), date("Y"));
+                        $Sep              = ", ";
+                        $Data             = "[";
+                        $DataList         = array();
+                        
+                        foreach($CurrentBandwidth->overall_usage[0] as $Day) {
+                            $DataList[date("d", strtotime($Day->timestamp))] = $Day;
+                        }
+                        
+                        for($Loop=1; $Loop<=$NumberOfDays; $Loop++) {
+                            if($Loop == $NumberOfDays) {
+                                $Sep = "";
+                            }
+                
+                            if(array_key_exists($Loop, $DataList)) {
+                                $Data .= $DataList[$Loop]->hits . $Sep;
+                            }
+                            else {
+                                $Data .= "0" . $Sep;
+                            }
+                        }
+                        
+                        $Data .= "]";
+            
+                        print('<div id="cdnify-dashboard-graph" data-input="' . $Data . '" data-input-last="' . $Data . '"></div>');
+                    }
+                    else {
+                        print("Your selected resource does not exist.");
+                    }
+                }
+                else {
+                    print("You don't have any resources.");
+                }
+            }
+            else {
+                print("Please select a resource for your website to use.");
+            }
+        }
+        else {
+            print("Please update your API key to view your resource bandwidth.");
+        }
+    }
     
 }
 
 add_action("init", array("CDNifyManager", "use_cdnify"));
 add_action("admin_menu", array("CDNifyManager", "admin_page"));
-add_action("admin_init",  array("CDNifyManager", "enqueue_style"));
+add_action("admin_init", array("CDNifyManager", "enqueue_style"));
+//add_action("admin_enqueue_scripts", array("CDNifyManager", "enqueue_javascript"));
+//add_action("wp_dashboard_setup", array("CDNifyManager", "dashboard_widget_graph"));
 
 ?>
