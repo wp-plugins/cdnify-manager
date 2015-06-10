@@ -10,7 +10,9 @@ CDNify.com for WordPress - View and manage your resources, create new resources 
 
 == Description ==
 
-CDNify Manager is the perfect solution for any WordPress website which needs the use of a CDN. This plugin works with the API of cdnify.com.
+CDNify Manager is the perfect solution for any WordPress website which needs the use of a CDN. This plugin works with the API of cdnify.com
+
+Sign up to CDNify at [cdnify.com](https://cdnify.com/pricing "Signup instantly to CDNify") and use the code AWESOMECDNIFYMANAGER to get 15% off any monthly plan for 3 months.
 
 * View your resources
 * Create new resources
@@ -29,7 +31,7 @@ CDNify Manager is the perfect solution for any WordPress website which needs the
 == Frequently Asked Questions ==
 
 = Q. I have a question =
-A. Please get in touch: paul(at)paulandsam.co
+A. Please get in touch: support(at)paulandsam.co
 
 == Changelog ==
 
