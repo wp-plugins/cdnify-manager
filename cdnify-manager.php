@@ -4,7 +4,7 @@
  * Plugin Name: CDNify Manager
  * Plugin URI: https://www.paulandsam.co/cdnify-manager/
  * Description: CDNify.com for WordPress - Power your website with a Content Delivery Network (CDN). View and manage your resources, create new resources within WordPress and choose which resource your website should use.
- * Version: 1.1.1
+ * Version: 1.2
  * Author: Paul Gillespie
  * Author URI: https://www.paulandsam.co/
  * License: GPL v3
@@ -345,7 +345,7 @@ class CDNifyManager {
         }
     }
     
-    function use_cdnify() {
+    static function use_cdnify() {
         if(get_option("cdnify_resource") != "") {
             if(get_option("cdnify_api_key") != "") {
                 add_filter("script_loader_src", array("CDNifyManager", "change_urls"));
@@ -353,6 +353,7 @@ class CDNifyManager {
                 add_filter("wp_get_attachment_thumb_url", array("CDNifyManager", "change_urls"));
                 add_filter("wp_get_attachment_url", array("CDNifyManager", "change_urls"));
                 add_filter("pre_link_image", array("CDNifyManager", "change_urls"));
+                add_filter("the_content", array("CDNifyManager", "change_content"));
                 
                 $options = wp_load_alloptions();
                 
@@ -365,18 +366,34 @@ class CDNifyManager {
         }
     }
     
-    function change_urls($url, $id=null) {
+    static function get_protocol() {
         $protocol = "http";
         
-        if(preg_match("/^https/", $url)) {
+        if(preg_match("/^https/", site_url())) {
             $protocol = "https";
         }
         
+        return($protocol);
+    }
+    
+    static function change_urls($url, $id=null) {
         if(!is_admin()) {
-            $url = str_replace(site_url(), $protocol. "://" . get_option("cdnify_resource"), $url);
+            $url = str_replace(site_url(), CDNifyManager::get_protocol() . "://" . get_option("cdnify_resource"), $url);
         }
         
         return($url);
+    }
+    
+    static function change_content($content) {
+        if(get_post_status(get_the_ID()) == "publish") {
+            if(preg_match_all('/img.*?src="(.*?)"/', $content, $matches)) {
+                foreach($matches[1] as $image) {
+                    $content = str_replace($image, CDNifyManager::change_urls($image), $content);
+                }
+            }
+        }
+        
+        return($content);
     }
 
     function dashboard_widget_graph() {

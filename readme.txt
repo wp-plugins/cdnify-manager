@@ -35,6 +35,9 @@ A. Please get in touch: support(at)paulandsam.co
 
 == Changelog ==
 
+= 1.2 =
+* Image assets within post and page content now use CDNify.
+
 = 1.1.1 =
 * If a resource is deleted, then no attempt is made to use that resource.
 
